@@ -1,0 +1,4 @@
+
+* Code book for the tidy data set
+
+Describes the data and the transformations

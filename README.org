@@ -1,0 +1,9 @@
+
+* Getting and cleaning data assignment 3
+
+This repository contains the files required for Coursera getting and cleaning data assignment 3.
+
+Relevent files are:
+- README.md :: this file
+- CodeBook.md :: describing the data and the transformations
+- run_analysis.R :: analysis R script
