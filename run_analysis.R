@@ -126,3 +126,7 @@ activities <- bind_cols(mean_and_std_activities, as.tbl(activity_type_labels_df)
 mean_by_activity_type <- 
     group_by(activities, activity_name) %>%
     summarize_all(mean)
+
+
+#write.table(activities, file = "tidy_data.txt", row.names = FALSE)
+#write.table(mean_by_activity_type, file = "tidy_data_summary.txt", row.names = FALSE)
