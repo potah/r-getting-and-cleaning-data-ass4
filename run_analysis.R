@@ -1,130 +1,217 @@
+#
+# utility function to check and install packages
+#
+checkPackages <- function(packageNames) {
+    # make sure we remove duplicates
+    packageNames <- unique(packageNames)
+    installedPackages <- installed.packages()[,1]
 
-library(dplyr)
+    #sapply(packageNames, getInstallPackageFunction())
+    sapply(packageNames,
+           function(pkg) {
+               if (!is.element(pkg, installedPackages)) {
+                   install.packages(pkg)
+               }
+               # use character.only for a character vector
+               require(pkg,
+                       character.only = TRUE,
+                       warn.conflicts = FALSE,
+                       quietly = TRUE)
+           })
+}
+
+
+# make sure we have our needed packages installed
+checkPackages(c("dplyr", "lubridate", "purrr"))
 
 #
-# download the data
+# download and extract file
+# return the extract directory
 #
-download_dir <- "data"
+downloadAndExtract <- function(extractDir) {
+    if (!dir.exists(extractDir)) {
+        dir.create(extractDir)
+    }
 
-if (!dir.exists(download_dir)) {
-    dir.create(download_dir)
+    unzipDir <- paste(extractDir, "UCI HAR Dataset", sep = "/")
+    
+    if (!dir.exists(unzipDir)) {
+        localZip <- paste(extractDir, "dataset.zip", sep = "/")
+        
+        if (!file.exists(localZip)) {
+            url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+        
+            download.file(url = url,
+                          destfile = localZip,
+                          method = "auto",
+                          quiet = T)
+        }
+        
+        unzip(zipfile = localZip,
+              exdir = unzipDir)
+    }
+
+    # return the combined directory
+    unzipDir
 }
-# change to the download the data directory
-setwd(download_dir)
-
-data_url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
-data_file <- "dataset.zip"
-if (!file.exists(data_file)) {
-    download.file(url = data_url,
-                  destfile = data_file,
-                  mode = 'wb')
-}
-
-# we know that this is the directory name
-# check if we have already unzipped
-unzip_dir <- "UCI HAR Dataset"
-if (!dir.exists(unzip_dir)) {
-    unzip(data_file, exdir=".")
-}
-# change to our unzipped data directory
-setwd(unzip_dir)
-
-# setup our names
-test_name <- "test"
-train_name <- "train"
-data_name <- "X"
-activity_name <- "Y"
-subject_name <- "subject"
 
 #
 # create a couple of helper functions for loading our tibbles
 #
 # note that this is expecting the current directory to
 # be the root directory inside the unzipped data
-data_path <- function(data_type, test_or_train) {
-    file_name <- paste(data_type, "_", test_or_train, ".txt", sep="")
+dataPath <- function(baseDir, dataType, testOrTrain) {
+    fileName <- paste(dataType, "_", testOrTrain, ".txt", sep="")
 
-    paste(test_or_train, file_name, sep="/")
+    paste(baseDir, testOrTrain, fileName, sep="/")
 }
 
-load_tibble <- function(data_type, test_or_train) {
-    as.tbl(read.csv(data_path(data_type, test_or_train), sep="", header=FALSE, stringsAsFactors=FALSE))
+loadTibble <- function(baseDir, dataType, testOrTrain) {
+    as.tbl(
+        read.csv(
+            dataPath(baseDir, dataType, testOrTrain), 
+            sep="", 
+            header=FALSE, 
+            stringsAsFactors=FALSE))
 }
 
-# load the train data
-train_data <- load_tibble(data_name, train_name)
-train_activity <- load_tibble(activity_name, train_name)
-train_subject <- load_tibble(subject_name, train_name)
 
-# load the test data
-test_data <- load_tibble(data_name, test_name)
-test_activity <- load_tibble(activity_name, test_name)
-test_subject <- load_tibble(subject_name, test_name)
+getLoadTibbleFunc <- function(extractPath) {
+    partial(loadTibble, baseDir = extractPath)
+}
 
-#
-# Part 1.  Merge the dataset
-#
-# combine the tables
-activity_data <- bind_rows(train_data, test_data)
-activity_type  <- bind_rows(train_activity, test_activity)
-subject <- bind_rows(train_subject, test_subject)
+getFeatures <- function(extractPath) {
+    features_file <- paste(extractPath, "features.txt", sep = "/")
+    features <- read.csv(features_file, sep="", header=FALSE, stringsAsFactors=FALSE)[,2]
+    features <- gsub("-", "_", features)
+    features <- gsub("\\(|\\)", "", features)
+    features <- gsub("^f", "freq", features)
+    features <- gsub("^t", "time", features)
+    
+    features
+}
 
-# make everything a bit nicer
-# get the feature names
-features_file <- "features.txt"
-features <- read.csv(features_file, sep="", header=FALSE, stringsAsFactors=FALSE)[,2]
-features <- gsub("-", "_", features)
-features <- gsub("\\(|\\)", "", features)
-features <- gsub("^f", "freq", features)
-features <- gsub("^t", "time", features)
+getActivityLabels <- function(extractPath) {
+    activityLabelsFile <- paste(extractPath, "activity_labels.txt", sep = "/")
+    activityLabels <- as.tbl(read.csv(activityLabelsFile, sep="", header=FALSE, stringsAsFactors=FALSE))
+    colnames(activityLabels) <-  c("id", "label")
+    
+    # return the tibble
+    activityLabels
+}
 
-#
-# Part 2.  Extract the mean and std columns
-#
-# select the columns which are "mean" and "std"
-which_mean_and_std_features <- grep("mean[^F]|std[^F]", features)
-mean_and_std_features <- features[which_mean_and_std_features]
-mean_and_std_activities <- activity_data[,which_mean_and_std_features]
-
-# set the column names for the chosen columns
-colnames(mean_and_std_activities) <- mean_and_std_features
-
-# let's add in the activity names
-activity_labels_file <- "activity_labels.txt"
-activity_labels <- as.tbl(read.csv(activity_labels_file, sep="", header=FALSE, stringsAsFactors=FALSE))
-colnames(activity_labels) <-  c("id", "label")
-
-activity_label_from_id <- function(activity_id) {
+activityLabelFromId <- function(activity_id) {
     (activity_labels %>% filter(id == activity_id))$label
 }
 
-# should run install.packages("tidyverse")
-# load the library to get the map functions
-library(purrr)
+#
+# setup section
+#
+
+# set our working directory to the extracted path
+# setwd(extractedFileDirectory)
+
+# we know the structure of our unzipped files
+# setup our names
+testName <- "test"
+trainName <- "train"
+dataName <- "X"
+activityName <- "Y"
+subjectName <- "subject"
+
+#
+# download and extract our files
+#
+extractTo <- "data"
+extractedFileDirectory <- downloadAndExtract(extractTo)
+
+# get our tibble loader function
+loadTibbleFunc <- getLoadTibbleFunc(extractedFileDirectory)
+
+# load the train data
+trainData <- loadTibbleFunc(dataName, trainName)
+trainActivity <- loadTibbleFunc(activityName, trainName)
+trainSubject <- loadTibbleFunc(subjectName, trainName)
+
+# load the test data
+testData <- loadTibbleFunc(dataName, testName)
+testActivity <- loadTibbleFunc(activityName, testName)
+testSubject <- loadTibbleFunc(subjectName, testName)
+
+#
+# Part 1 start - merge the dataset
+#
+# combine the tables
+activityData <- bind_rows(trainData, testData)
+activityType  <- bind_rows(trainActivity, testActivity)
+subject <- bind_rows(trainSubject, testSubject)
+#
+# Part 1 end
+
+
+#
+# Part 2 start - extract the mean and standard deviation columns
+#
+
+#
+# get the feature names in a nicer format
+#
+features <- getFeatures(extractedFileDirectory)
+
+# select the columns which are "mean" and "std"
+whichMeanAndStdFeatures <- grep("mean_|std_", features)
+meanAndStdFeatures <- features[whichMeanAndStdFeatures]
+meanAndStdActivities <- activityData[,whichMeanAndStdFeatures]
+
+# set the column names for the chosen columns
+colnames(meanAndStdActivities) <- meanAndStdFeatures
+
+#
+# Part 2 end
+#
+
+#
+# Part 3 start - descriptive activity names
+#
+
+# let's add in the activity names
+activityLabelsTbl <- getActivityLabels(extractedFileDirectory)
+activityLabels <- activityLabelsTbl$label
 
 # set the column name for our activity types to refer to it more easily
-colnames(activity_type) <- c("id")
+colnames(activityType) <- c("id")
 
-#
-# Part 3.  Descriptive activity names
-#
 # make a data.frame from our activity type labels
 # set the column heading to "activity_name"
-activity_type_labels_df <- 
-    data.frame(activity_name = map_chr(activity_type$id, activity_label_from_id))
+activityType <- 
+    as.tbl(
+        data.frame(
+            activity_name = map_chr(activityType$id, 
+                                    function(activityId) {
+                                        activityLabels[activityId]
+                                    })))
+#
+# Part 3 end
+#
 
 #
 # Part 4.  Add the descriptive names to the activity data table
 #
 # bind the activity labels as a column with the heading "activity_label"
 # and set to a new data.table
-activities <- bind_cols(mean_and_std_activities, as.tbl(activity_type_labels_df))
+# add the subject column with a heading of subject
+activities <- bind_cols(meanAndStdActivities, activityType)
+# make it a nice column name
+colnames(subject) <- c("subject")
+# add subject column to the end
+activities <- bind_cols(activities, subject)
 
 #
 # Part 5.  Summarize by activity
 #
-mean_by_activity_type <- 
-    group_by(activities, activity_name) %>%
+summariseByActivitySubject <- 
+    activities %>% 
+    group_by(activity_name, subject) %>%
     summarize_all(mean)
 
 
