@@ -34,19 +34,19 @@ downloadAndExtract <- function(extractDir) {
     }
 
     unzipDir <- paste(extractDir, "UCI HAR Dataset", sep = "/")
-    
+
     if (!dir.exists(unzipDir)) {
         localZip <- paste(extractDir, "dataset.zip", sep = "/")
-        
+
         if (!file.exists(localZip)) {
             url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
-        
+
             download.file(url = url,
                           destfile = localZip,
                           method = "auto",
                           quiet = T)
         }
-        
+
         unzip(zipfile = localZip,
               exdir = unzipDir)
     }
@@ -69,9 +69,9 @@ dataPath <- function(baseDir, dataType, testOrTrain) {
 loadTibble <- function(baseDir, dataType, testOrTrain) {
     as.tbl(
         read.csv(
-            dataPath(baseDir, dataType, testOrTrain), 
-            sep="", 
-            header=FALSE, 
+            dataPath(baseDir, dataType, testOrTrain),
+            sep="",
+            header=FALSE,
             stringsAsFactors=FALSE))
 }
 
@@ -87,7 +87,7 @@ getFeatures <- function(extractPath) {
     features <- gsub("\\(|\\)", "", features)
     features <- gsub("^f", "freq", features)
     features <- gsub("^t", "time", features)
-    
+
     features
 }
 
@@ -95,7 +95,7 @@ getActivityLabels <- function(extractPath) {
     activityLabelsFile <- paste(extractPath, "activity_labels.txt", sep = "/")
     activityLabels <- as.tbl(read.csv(activityLabelsFile, sep="", header=FALSE, stringsAsFactors=FALSE))
     colnames(activityLabels) <-  c("id", "label")
-    
+
     # return the tibble
     activityLabels
 }
@@ -183,10 +183,10 @@ colnames(activityType) <- c("id")
 
 # make a data.frame from our activity type labels
 # set the column heading to "activity_name"
-activityType <- 
+activityType <-
     as.tbl(
         data.frame(
-            activity_name = map_chr(activityType$id, 
+            activity_name = map_chr(activityType$id,
                                     function(activityId) {
                                         activityLabels[activityId]
                                     })))
@@ -209,11 +209,10 @@ activities <- bind_cols(activities, subject)
 #
 # Part 5.  Summarize by activity
 #
-summariseByActivitySubject <- 
-    activities %>% 
+summariseByActivitySubject <-
+    activities %>%
     group_by(activity_name, subject) %>%
     summarize_all(mean)
-
 
 #write.table(activities, file = "tidy_data.txt", row.names = FALSE)
 #write.table(mean_by_activity_type, file = "tidy_data_summary.txt", row.names = FALSE)
