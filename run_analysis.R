@@ -123,8 +123,8 @@ activities <- bind_cols(mean_and_std_activities, as.tbl(activity_type_labels_df)
 #
 # Part 5.  Summarize by activity
 #
-mean_by_activity_type <- 
-    group_by(activities, activity_name) %>%
+mean_by_activity_type <- activities %>%
+    group_by(activity_name) %>%
     summarize_all(mean)
 
 
