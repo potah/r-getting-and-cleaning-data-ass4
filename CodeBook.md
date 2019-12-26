@@ -6,9 +6,35 @@ There is only one script involved in the tranformation: [`run_analysis.R`](run_a
 
 ## `run_analysis` tranformations
 
+### Function definition and package install and load
+Definition of the following utility functions:
+- checkPackages
+  - check and install passed in package vector if required
+- downloadAndExtract
+  - download and extract data file if required
+- dataFilePath
+  - utility to create the test or train data file name
+- loadTibble
+  - load a tibble from a provided file path
+- loadTibbleFromExtractDir
+  - load a tibble from the extracted data directory
+- loadTestOrTrain
+  - load a test or training data tibble
+- getLoadTestOrTrainFunc
+  - returns a function which can be used to load a test or train tibble
+- getFeatures
+  - returns a prettified features tibble
+- getActivityLabels
+  - return a tibble of the activity labels
+- activityLabelFromId (unused)
+  - unused function
+
 ### Script setup
-Download data zip file and unzip.
-Ensure that we don't duplicate effort by checking to see if this has previously been done.
+Setup:
+- data names
+- local extract directory name
+- download and extract data file
+- load the testing and training datasets
 
 ### Part 1. Merge train and test data
 We are using the dplyr package and functionality for this one.
