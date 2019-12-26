@@ -60,19 +60,46 @@ Combine test and training data using `bind_rows` function.
   - combined trainActivity and testActivity
 - `subject`: 10299 x 1
   - combined trainSubject and testSubject
+  
+Note that column headings for the data tables loaded so far are not meaningful.
 
 
-### Part 2. Extract mean and std. deviation columns
-We clean up the column names and extract only this which are mean and std. deviation.
+### Part 2. Extract mean and standard deviation columns
 
-The resulting dataset is:
-- mean_and_std_activities
+We will use the `getFeatures` function to load a data table from the `features.txt` file included in the downloaded zip.
+
+Resulting datatable is:
+- `features`: 561 x 1
+  - contains "pretty" names for each of the 561 measurements in the part 1. `activityData`
+  - column name is `name`
+
+Set the column names on the `activityData` datatable to the `features` data.
+
+Create a new data table with only the mean and standard deviation measurements:
+- `meanAndStdActivities`: 10299 x 48
+  - only mean and standard deviation measurements for X,Y,Z axis for:
+    - timeBodyAcc
+    - timeGravityAcc
+    - timeBodyAccJerk
+    - timeBodyGyro
+    - timeBodyGyroJerk
+    - freqBodyAcc
+    - freqBodyAccJerk
+    - freqBodyGyro
 
 ### Part 3. Apply the descriptive activity names to the activity
-The script then produces a list of activity names which match the rows of the activity_data / mean_and_std_activities.
 
-The activity names dataframe produced is:
-- activity_type_labels_df
+We will use the `getActivityLabels` function to load a data table from the `activity_labels.txt` file included in the downloaded zip.
+
+Resulting data table is:
+- `activityLabelsTbl`: 6 x 2
+  - column names: id, label
+  
+The column `activityLabelsTbl$label` is used to map the `activityType` data table from part 1 to have the activity names instead of the ids.
+
+Resulting data table is:
+- `activityType`: 10299 x 1
+  - column name: activity_name
 
 ### Part 4. Use the descriptive activity names with the combined mean and std. dataset
 Add the descriptive activity names to our data.
