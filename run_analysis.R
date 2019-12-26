@@ -108,6 +108,7 @@ getFeatures <- function(extractPath) {
         mutate(name = prettifyFeatureName(name))
 }
 
+# return a tibble of the activity labels
 getActivityLabels <- function(extractPath) {
     activityLabels <- loadTibbleFromExtractDir(extractDir = extractPath,
                                                "activity_labels.txt")
@@ -117,6 +118,8 @@ getActivityLabels <- function(extractPath) {
     activityLabels
 }
 
+
+# unused
 activityLabelFromId <- function(activity_id) {
     (activity_labels %>% filter(id == activity_id))$label
 }
@@ -225,12 +228,11 @@ colnames(subject) <- c("subject")
 activities <- bind_cols(activities, subject)
 
 #
-# Part 5.  Summarize by activity
+# Part 5.  Get the summary mean by activity and subject
 #
-summaryByActivitySubject <-
+meanByActivitySubject <-
     activities %>%
     group_by(activity_name, subject) %>%
     summarize_all(mean)
 
-#write.table(activities, file = "tidy_data.txt", row.names = FALSE)
-#write.table(mean_by_activity_type, file = "tidy_data_summary.txt", row.names = FALSE)
+write.table(meanByActivitySubject, file = "tidy_data.txt", row.names = FALSE, quote = FALSE)
