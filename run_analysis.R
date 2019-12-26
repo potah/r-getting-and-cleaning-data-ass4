@@ -25,7 +25,8 @@ checkPackages <- function(packageNames) {
 checkPackages(c("dplyr", "lubridate", "purrr"))
 
 #
-# download and extract file
+# utility function to download and extract file
+# do not change the working directory
 # return the extract directory
 #
 downloadAndExtract <- function(extractDir) {
@@ -56,44 +57,60 @@ downloadAndExtract <- function(extractDir) {
 }
 
 #
-# create a couple of helper functions for loading our tibbles
+# create helper functions for loading our tibbles
 #
-# note that this is expecting the current directory to
-# be the root directory inside the unzipped data
-dataPath <- function(baseDir, dataType, testOrTrain) {
-    fileName <- paste(dataType, "_", testOrTrain, ".txt", sep="")
-
-    paste(baseDir, testOrTrain, fileName, sep="/")
+# return the name of a data file
+dataFilePath <- function(dataType, testOrTrain) {
+    paste(testOrTrain, 
+          paste(dataType, "_", testOrTrain, ".txt", sep=""),
+          sep = "/")
 }
 
-loadTibble <- function(baseDir, dataType, testOrTrain) {
+# function to return our standard tibble for a dataset
+loadTibble <- function(filePath) {
     as.tbl(
         read.csv(
-            dataPath(baseDir, dataType, testOrTrain),
+            filePath,
             sep="",
             header=FALSE,
             stringsAsFactors=FALSE))
 }
 
-
-getLoadTibbleFunc <- function(extractPath) {
-    partial(loadTibble, baseDir = extractPath)
+# load a tibble from a file in our extract directory
+loadTibbleFromExtractDir <- function(extractDir, fileName) {
+    loadTibble(paste(extractDir, fileName, sep = "/"))
 }
 
-getFeatures <- function(extractPath) {
-    features_file <- paste(extractPath, "features.txt", sep = "/")
-    features <- read.csv(features_file, sep="", header=FALSE, stringsAsFactors=FALSE)[,2]
-    features <- gsub("-", "_", features)
-    features <- gsub("\\(|\\)", "", features)
-    features <- gsub("^f", "freq", features)
-    features <- gsub("^t", "time", features)
+# function to return a tibble for a particular data file
+loadTestOrTrain <- function(extractDir, dataType, testOrTrain) {
+    loadTibbleFromExtractDir(extractDir, dataFilePath(dataType, testOrTrain))    
+}
 
-    features
+# use purrr::partial to return a func that doesn't need the 
+# extractPath repeated in the function call
+getLoadTestOrTrainFunc <- function(extractPath) {
+    partial(loadTestOrTrain, extractDir = extractPath)
+}
+
+# utility func to return a features tibble that has nicer column names
+getFeatures <- function(extractPath) {
+    # We will create a function composition that we can use
+    # in mutate to make the feature names nicer
+    prettifyFeatureName <- compose(
+        partial(gsub, pattern = "-", replacement = "_"),
+        partial(gsub, pattern = "\\(|\\)", replacement = ""),
+        partial(sub, pattern = "^f", replacement = "freq"),
+        partial(sub, pattern = "^t", replacement = "time"))
+    
+    loadTibbleFromExtractDir(extractDir = extractPath, 
+                             "features.txt") %>% 
+        select(name = V2) %>%
+        mutate(name = prettifyFeatureName(name))
 }
 
 getActivityLabels <- function(extractPath) {
-    activityLabelsFile <- paste(extractPath, "activity_labels.txt", sep = "/")
-    activityLabels <- as.tbl(read.csv(activityLabelsFile, sep="", header=FALSE, stringsAsFactors=FALSE))
+    activityLabels <- loadTibbleFromExtractDir(extractDir = extractPath,
+                                               "activity_labels.txt")
     colnames(activityLabels) <-  c("id", "label")
 
     # return the tibble
@@ -126,17 +143,17 @@ extractTo <- "data"
 extractedFileDirectory <- downloadAndExtract(extractTo)
 
 # get our tibble loader function
-loadTibbleFunc <- getLoadTibbleFunc(extractedFileDirectory)
+loadTestOrTrain <- getLoadTestOrTrainFunc(extractedFileDirectory)
 
 # load the train data
-trainData <- loadTibbleFunc(dataName, trainName)
-trainActivity <- loadTibbleFunc(activityName, trainName)
-trainSubject <- loadTibbleFunc(subjectName, trainName)
+trainData <- loadTestOrTrain(dataName, trainName)
+trainActivity <- loadTestOrTrain(activityName, trainName)
+trainSubject <- loadTestOrTrain(subjectName, trainName)
 
 # load the test data
-testData <- loadTibbleFunc(dataName, testName)
-testActivity <- loadTibbleFunc(activityName, testName)
-testSubject <- loadTibbleFunc(subjectName, testName)
+testData <- loadTestOrTrain(dataName, testName)
+testActivity <- loadTestOrTrain(activityName, testName)
+testSubject <- loadTestOrTrain(subjectName, testName)
 
 #
 # Part 1 start - merge the dataset
@@ -159,12 +176,13 @@ subject <- bind_rows(trainSubject, testSubject)
 features <- getFeatures(extractedFileDirectory)
 
 # select the columns which are "mean" and "std"
-whichMeanAndStdFeatures <- grep("mean_|std_", features)
-meanAndStdFeatures <- features[whichMeanAndStdFeatures]
-meanAndStdActivities <- activityData[,whichMeanAndStdFeatures]
+colnames(activityData) <- features$name
 
-# set the column names for the chosen columns
-colnames(meanAndStdActivities) <- meanAndStdFeatures
+# can't run the select below as we have duplicate column names
+# meanAndStdActivities <- activityData %>%
+#     select(matches("_mean_|_std_"))
+whichMeanAndStdFeatures <- grep("_mean_|_std_", features$name)
+meanAndStdActivities <- activityData[,whichMeanAndStdFeatures]
 
 #
 # Part 2 end
@@ -181,7 +199,7 @@ activityLabels <- activityLabelsTbl$label
 # set the column name for our activity types to refer to it more easily
 colnames(activityType) <- c("id")
 
-# make a data.frame from our activity type labels
+# make a tibble from our activity type labels
 # set the column heading to "activity_name"
 activityType <-
     as.tbl(
@@ -209,7 +227,7 @@ activities <- bind_cols(activities, subject)
 #
 # Part 5.  Summarize by activity
 #
-summariseByActivitySubject <-
+summaryByActivitySubject <-
     activities %>%
     group_by(activity_name, subject) %>%
     summarize_all(mean)
