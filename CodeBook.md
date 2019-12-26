@@ -34,28 +34,33 @@ Setup:
 - data names
 - local extract directory name
 - download and extract data file
-- load the testing and training datasets
+- load the testing and training data tables
+
+Training datatables are:
+- trainData: 7352 x 561
+  - 7352 rows of measurement data
+- trainActivity: 7352 x 1
+  - specified activity id for each training row
+- trainSubject: 7352 x 1
+  - specified subject id for each training row
+
+Testing datatables are:
+- testData: 2947 x 561
+  - 2947 rows of measurement data
+- testActivity: 2947 x 1
+  - specified activity id for each test row
+- testSubject: 2947 x 1
+  - specified subject id for each test row
 
 ### Part 1. Merge train and test data
-We are using the dplyr package and functionality for this one.
-Create data tables for training and test data for:
-- measurements
-- activity type
-- subject
+Combine test and training data using `bind_rows` function.
+- `activityData`: 10299 x 561
+  - combined trainData and testData
+- `activityType`: 10299 x 1
+  - combined trainActivity and testActivity
+- `subject`: 10299 x 1
+  - combined trainSubject and testSubject
 
-Datatables are:
-- train_data
-- train_activity
-- train_subject
-- test_data
-- test_activity
-- test_subject
-
-After these datatables have been created, we will merge them using bind_rows
-Combined datatables are:
-- activity_data
-- activity_type
-- subject
 
 ### Part 2. Extract mean and std. deviation columns
 We clean up the column names and extract only this which are mean and std. deviation.
