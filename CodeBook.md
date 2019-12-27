@@ -100,20 +100,26 @@ The column `activityLabelsTbl$label` is used to map the `activityType` data tabl
 Resulting data table is:
 - `activityType`: 10299 x 1
   - column name: activity_name
+`activityType` contains the activity labels for each row in `activityData` and `meanAndStdActivities`
 
 ### Part 4. Use the descriptive activity names with the combined mean and std. dataset
-Add the descriptive activity names to our data.
-We use bind_cols.
 
-The resulting datatable is:
-- activities
+Add the descriptive activity names and the subject ids to our `meanAndStdActivities` data table.
+
+The resulting data table is:
+- `activities`: 10299 x 50
+  - added column `activity_name`: descriptive labels of activity
+  - added column `subject`: subject id for measurement
 
 ### Part 5. Summarize mean and std. deviation by activity
-We will take advantage of dplyr group_by to summarize by activity_name.
 
-the resulting datatable is:
-- mean_by_activity_type
+Summarize `activities` data table.  Get the mean by `activity_name` and `subject`.
+The function `group_by` is used for grouping and we use `summarize_all` on the grouped data table.
 
-This has 6 rows as per the activity_name and columns are the mean of the values for these activities.
+The resulting data table is:
+- `meanByActivitySubject`: 180 x 50
 
+We have the same 50 columns as the `activities` data table.
+We end up with 180 rows as we have 6 activities and 30 subjects: 30 x 6 = 180 rows.
 
+The `meanByActivitySubject` data table is written out to the file `tidy_data.txt`.
