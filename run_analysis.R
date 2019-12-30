@@ -49,7 +49,7 @@ downloadAndExtract <- function(extractDir) {
         }
 
         unzip(zipfile = localZip,
-              exdir = unzipDir)
+              exdir = extractDir)
     }
 
     # return the combined directory
@@ -136,7 +136,7 @@ activityLabelFromId <- function(activity_id) {
 testName <- "test"
 trainName <- "train"
 dataName <- "X"
-activityName <- "Y"
+activityName <- "y"
 subjectName <- "subject"
 
 #
