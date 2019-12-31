@@ -97,7 +97,7 @@ getFeatures <- function(extractPath) {
     # We will create a function composition that we can use
     # in mutate to make the feature names nicer
     prettifyFeatureName <- compose(
-        partial(gsub, pattern = "-", replacement = "_"),
+        partial(gsub, pattern = "-|,", replacement = "_"),
         partial(gsub, pattern = "\\(|\\)", replacement = ""),
         partial(sub, pattern = "^f", replacement = "freq"),
         partial(sub, pattern = "^t", replacement = "time"))
